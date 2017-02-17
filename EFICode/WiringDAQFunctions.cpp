@@ -11,36 +11,8 @@ using namespace std;
 //not sure when to return 2
 //how will we know what we are reading
 // if char or c string, etc
-//what is write protection and do i need it
-//what is hold pin
 
 
-// function to check how much space there is left?
-
-
-#define MOSI 51
-#define MISO 50
-#define SCK 7
-//write protect 49
-//hold 48
-#define DENSITY 16000000
-
-#define SS1 43
-#define SS2 42
-#define SS3 41
-#define SS4 40
-bool ss1Writable = true;
-bool ss2Writable = true;
-bool ss3Writable = true;
-bool ss4Writable = true;
-int lastSS = 0;
-#define READ
-#define WRITE
-int32_t spaceLeft[4] = {DENSITY, DENSITY, DENSITY, DENSITY}; //16MB
-
-#define MAXSPEED 50000000
-
-SPISettings testSettings = SPISettings(13000000, MSBFIRST, SPI_MODE0);
 
 void setup() {
   pinMode(MOSI, OUTPUT); //MOSI MISO might be defaulted
@@ -71,21 +43,34 @@ void loop() {
   Returns 1 if attempting to write past the end of memory.
   Returns 2 if EEPROM fails to ack, potential hardware failure.
 */
-int memWrite(int address, char data[]) {
-
+int memWrite(char data[]) {
   int SS = whichEEPROM();
   if (SS == -1) {
     return 1;
   }
   digitalWrite(SS, LOW);
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BTYE);
   SPI.beginTransaction(testSettings);
-  for (int i = 0; i < strlen(data); i++) {
-    shiftOut(SS, SCK, MSBFIRST, data[i]);
+  int lengthOfCString = sizeof(data);
+  for (int i = 0; i < sizeof(data); i++) {
+    shiftOut(MOSI, SCK, MSBFIRST, data[i]);
+    //decement array
+    if(spaceLeft[storageIndex] > 0){
+      spaceLeft[storageIndex]--;
+    }
+    else if (spaceLeft[storageIndex] == 0){
+      storageIndex++;
+      full(SS);
+      SS = whichEEPROM();
+      if(SS ==-1){
+        return 1;
+      }
+    }
   }
+  //possible access through memory address
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_DISABLE_BYTE);
   digitalWrite(SS, HIGH);
   return 0;
-
-  //shiftOut(SS, SCK, MSBFIRST, data)
 
 }
 /*
@@ -94,22 +79,36 @@ int memWrite(int address, char data[]) {
   Returns 0 if successful. Returns 1 if attempting to write past the end of memory.
   Returns 2 if EEPROM fails to act, potential hardware failure.
 */
-int memWriteInt(int address, int data) {
+int memWriteInt(int data) {
   int SS = whichEEPROM();
   if (SS == -1) {
     return 1;
   }
   digitalWrite(SS, LOW);
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BTYE);
   SPI.beginTransaction(testSettings);
   byte bytedata[4];
   bytedata[0] = (byte) (data & 0xFF);
   bytedata[1] = (byte) ((data >> 8) & 0xFF);
   bytedata[2] = (byte) ((data >> 8) & 0xFF);
   bytedata[3] = (byte) ((data >> 8) & 0xFF);
-  for (int i = 0; i < sizeof(bytedata); i++) {
-    shiftOut(SS, SCK, MSBFIRST, bytedata[i]);
+  for (int i = 0; i < 4; i++) {
+    shiftOut(MOSI, SCK, MSBFIRST, bytedata[i]);
+    //decement array
+    if(spaceLeft[storageIndex] > 0){
+      spaceLeft[storageIndex]--;
+    }
+    else if (spaceLeft[storageIndex] == 0){
+      storageIndex++;
+      full(SS);
+      SS = whichEEPROM();
+      if(SS ==-1){
+        return 1;
+      }
+    }
   }
   //possible access through memory address
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_DISABLE_BYTE);
   digitalWrite(SS, HIGH);
   return 0;
 }
@@ -121,24 +120,36 @@ int memWriteInt(int address, int data) {
   Returns 0 if successful. Returns 1 if attempting to write past the end of memory.
   Returns 2 if EEPROM fails to ack, potential hardware failure.
 */
-int memWriteLong(int address, long data) { // 4 bytes
+int memWriteLong(long data) { // 4 bytes
   int SS = whichEEPROM();
   if (SS == -1) {
     return 1;
   }
   digitalWrite(SS, LOW);
-  SPI.beginTransaction(testSettings); //this is sort of unlcear why it is needed
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BTYE);
+  SPI.beginTransaction(testSettings);
   byte bytedata[4];
   bytedata[0] = (byte) (data & 0xFF);
   bytedata[1] = (byte) ((data >> 8) & 0xFF);
   bytedata[2] = (byte) ((data >> 8) & 0xFF);
   bytedata[3] = (byte) ((data >> 8) & 0xFF);
   for (int i = 0; i < 4; i++) {
-
-    shiftOut(SS, SCK, MSBFIRST, bytedata[i]);
-  }
-  digitalWrite(SS, HIGH);
+    shiftOut(MOSI, SCK, MSBFIRST, bytedata[i]);
+    
+    //decement array
+    if(spaceLeft[storageIndex] > 0){
+      spaceLeft[storageIndex]--;
+    }
+    else if (spaceLeft[storageIndex] == 0){
+      storageIndex++;
+      full(SS);
+      SS = whichEEPROM();
+      if(SS ==-1){
+        return 1;
+      }}}
   //possible access through memory address
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_DISABLE_BYTE);
+  digitalWrite(SS, HIGH);
   return 0;
 
 }
@@ -149,7 +160,7 @@ int memWriteLong(int address, long data) { // 4 bytes
   Returns 2 if EEPROM fails to ack, potential hardware failure.
   Will not check that length is greater than allocated length of char[].
 */
-int memRead(char* address, char arr[], int length) {
+int memRead(char arr[], int length) {
 
   int SS = whichEEPROM();
   if (SS == -1) {
@@ -169,7 +180,7 @@ int memRead(char* address, char arr[], int length) {
   Returns 0 if successful. Returns 1 if attempting to read past the end of memory.
   Returns 2 if EEPROM fails to ack, potential hardware failure.
 */
-int memWriteInt(int* address, int* data) {
+int memWriteInt(int* data) {
   byte intByte;
 
 }
@@ -180,7 +191,7 @@ int memWriteInt(int* address, int* data) {
   Returns 0 if successful. Returns 1 if attempting to read past the end of memory.
   Returns 2 if EEPROM fails to ack, potential hardware failure.
 */
-int memWriteLong(long* address, long* data) {
+int memWriteLong(long* data) {
 
 }
 
@@ -213,6 +224,7 @@ void full(int fullSlavePin) {
       break;
     case SS4:
       ss4Writable = false;
+      digitalWrite(WRITEPROTECT, HIGH);
       break;
     default:
       break;
