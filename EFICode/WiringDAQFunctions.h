@@ -9,26 +9,26 @@
 #define SS3 41
 #define SS4 40
 #define WRITEPROTECT 49
-#define WRITE_ENABLE_BYTE 6
-#define WRITE_DISABLE_BYTE 4
+#define WRITE_ENABLE_BYTE 0x06
+#define WRITE_DISABLE_BYTE 0x04
 
-#define DENSITY 16000000
+#define DENSITY 16000000    
 
 #define MAXSPEED 108000000  //108 MHz
+#include <SPI.h>
+
+static bool ss1Writable = true;
+static bool ss2Writable = true;
+static bool ss3Writable = true;
+static bool ss4Writable = true;
+
+static int32_t spaceLeft[4] = {DENSITY, DENSITY, DENSITY, DENSITY}; //16MB
+static int storageIndex = 0;
 
 
-bool ss1Writable = true;
-bool ss2Writable = true;
-bool ss3Writable = true;
-bool ss4Writable = true;
+static SPISettings testSettings = SPISettings(13000000, MSBFIRST, SPI_MODE0);
 
-int32_t spaceLeft[4] = {DENSITY, DENSITY, DENSITY, DENSITY}; //16MB
-int storageIndex = 0;
-
-
-SPISettings testSettings = SPISettings(13000000, MSBFIRST, SPI_MODE0);
-
-
+void SPIInit();
 int memWrite(char data[]);
 int memWriteInt(int data);
 int memWriteLong(long data);
@@ -39,5 +39,4 @@ int whichEEPROM();
 void full(int fullSlavePin);
 
 //page number for table of commands is 67 in spec
-
 #endif
