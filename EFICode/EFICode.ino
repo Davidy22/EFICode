@@ -1,8 +1,8 @@
 #include "Controller.h"
-
 #include "Constants.h"
 #include "TimerThree.h"
-//#include "EEPROM.h"
+#include "WiringDAQFunctions.h"
+#include <SPI.h>
 
 Controller *c;
 void countRev();
@@ -14,13 +14,16 @@ void setup() {
   c = new Controller();
 
   // Update all sensor values to current values.
-  c->readSensors();
+  c->readSensors();  
 
   // Attach rpm detector to revolution counter interrupt.
   attachInterrupt(HES_Pin, countRev, FALLING);
 
   // Initialize pulseOff timer, but do not attach the interrupt until it is necessary.
   Timer3.initialize();
+  
+  // Initialize EEPROM
+  SPIInit();
 }
 
 void loop() {

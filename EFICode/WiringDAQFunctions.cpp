@@ -1,7 +1,5 @@
 #include <SPI.h>
 
-
-
 using namespace std;
 //*****if the write was successful, but carried over to next chip do not send anything
 //only return 1 if there is not more memory availibe to write to
@@ -12,15 +10,11 @@ using namespace std;
 //how will we know what we are reading
 // if char or c string, etc
 
-
-
-void setup() {
-  pinMode(MOSI, OUTPUT); //MOSI MISO might be defaulted
-  pinMode(MISO, INPUT);
-  pinMode(SS1, INPUT);
-  pinMode(SS2, INPUT);
-  pinMode(SS3, INPUT);
-  pinMode(SS4, INPUT);
+void SPIInit() {
+  pinMode(SS1, OUTPUT);
+  pinMode(SS2, OUTPUT);
+  pinMode(SS3, OUTPUT);
+  pinMode(SS4, OUTPUT);
 
   digitalWrite(SS1, HIGH);
   digitalWrite(SS2, HIGH);
@@ -29,11 +23,6 @@ void setup() {
   //used to turn off file transfers LOW --> active
 
   SPI.begin();
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-
 }
 
 
