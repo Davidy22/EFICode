@@ -22,21 +22,25 @@ static bool ss2Writable = true;
 static bool ss3Writable = true;
 static bool ss4Writable = true;
 
+<<<<<<< HEAD
 static int32_t spaceLeft[4] = {DENSITY, DENSITY, DENSITY, DENSITY}; //16MB
 static int storageIndex = 0;
 
 
 static SPISettings testSettings = SPISettings(13000000, MSBFIRST, SPI_MODE0);
+=======
+>>>>>>> origin/master
 
 void SPIInit();
 int memWrite(char data[]);
 int memWriteInt(int data);
 int memWriteLong(long data);
-int memRead(char arr[],int length);
+int memRead(char arr[],int length, unsigned long address);
 int memWriteInt(int* data); 
 int memWriteLong(long* data);
 int whichEEPROM();
 void full(int fullSlavePin);
+void readyToWrite(int SS);
 
 //page number for table of commands is 67 in spec
 #endif

@@ -1,6 +1,22 @@
 #include <SPI.h>
+#include "WiringDAQFunctions.h"
 
 using namespace std;
+
+
+bool ss1Writable = false;
+bool ss2Writable = false;
+bool ss3Writable = true;
+bool ss4Writable = true;
+
+int32_t spaceLeft[4] = {DENSITY, DENSITY, DENSITY, DENSITY}; //16MB
+int storageIndex = 0;
+
+// read instruction 0x13
+
+
+SPISettings testSettings = SPISettings(13000000, MSBFIRST, SPI_MODE0);
+
 //*****if the write was successful, but carried over to next chip do not send anything
 //only return 1 if there is not more memory availibe to write to
 //arduino compiler does not support exceptions
@@ -10,6 +26,7 @@ using namespace std;
 //how will we know what we are reading
 // if char or c string, etc
 
+<<<<<<< HEAD
 void SPIInit() {
   pinMode(SS1, OUTPUT);
   pinMode(SS2, OUTPUT);
@@ -24,6 +41,9 @@ void SPIInit() {
 
   SPI.begin();
 }
+=======
+
+>>>>>>> origin/master
 
 
 /*
@@ -38,7 +58,7 @@ int memWrite(char data[]) {
     return 1;
   }
   digitalWrite(SS, LOW);
-  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BTYE);
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BYTE);
   SPI.beginTransaction(testSettings);
   int lengthOfCString = sizeof(data);
   for (int i = 0; i < sizeof(data); i++) {
@@ -73,10 +93,16 @@ int memWriteInt(int data) {
   if (SS == -1) {
     return 1;
   }
+  readyToWrite(SS);
   digitalWrite(SS, LOW);
-  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BTYE);
-  SPI.beginTransaction(testSettings);
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BYTE);
+  digitalWrite(SS, HIGH);
+  
+  SPI.beginTransaction(testSettings); //
   byte bytedata[4];
+  digitalWrite(SS, LOW);
+  shiftOut(MOSI, SCK, MSBFIRST, 0x12);
+  shiftOut(MOSI, SCK, MSBFIRST, 0x00000000);
   bytedata[0] = (byte) (data & 0xFF);
   bytedata[1] = (byte) ((data >> 8) & 0xFF);
   bytedata[2] = (byte) ((data >> 8) & 0xFF);
@@ -96,7 +122,9 @@ int memWriteInt(int data) {
       }
     }
   }
+  digitalWrite(SS, HIGH);
   //possible access through memory address
+  digitalWrite(SS, LOW); //activate write disable
   shiftOut(MOSI, SCK, MSBFIRST, WRITE_DISABLE_BYTE);
   digitalWrite(SS, HIGH);
   return 0;
@@ -115,7 +143,7 @@ int memWriteLong(long data) { // 4 bytes
     return 1;
   }
   digitalWrite(SS, LOW);
-  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BTYE);
+  shiftOut(MOSI, SCK, MSBFIRST, WRITE_ENABLE_BYTE);
   SPI.beginTransaction(testSettings);
   byte bytedata[4];
   bytedata[0] = (byte) (data & 0xFF);
@@ -149,16 +177,19 @@ int memWriteLong(long data) { // 4 bytes
   Returns 2 if EEPROM fails to ack, potential hardware failure.
   Will not check that length is greater than allocated length of char[].
 */
-int memRead(char arr[], int length) {
+int memRead(char arr[], int length, unsigned long address) {
 
   int SS = whichEEPROM();
   if (SS == -1) {
     return 1;
   }
   digitalWrite(SS, LOW);
+  shiftOut(MOSI, SCK, MSBFIRST, 0x13);
+  shiftOut(MOSI, SCK, MSBFIRST, address);
+  
   SPI.beginTransaction(testSettings);
   for (int i = 0; i < length; i++) {
-    SPI.transfer(arr[i]);
+    arr[i] = shiftIn(MISO, SCK, MSBFIRST);
   }
   digitalWrite(SS, HIGH);
   return 0;
@@ -218,5 +249,20 @@ void full(int fullSlavePin) {
     default:
       break;
   }
+}
+
+
+void readyToWrite(int SS) {
+  digitalWrite(SS, LOW);
+  shiftOut(MOSI, SCK, MSBFIRST, 0x05);
+  byte statusReg = shiftIn(MISO, SCK, MSBFIRST);
+  byte b = statusReg; // & B00000001;
+  Serial.println(b);
+  while (true){
+      delay(20);
+      b = shiftIn(MISO, SCK, MSBFIRST); //& B00000001;
+      Serial.println(b);
+  }
+  digitalWrite(SS, HIGH);
 }
 
